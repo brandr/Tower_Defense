@@ -4,12 +4,12 @@ from organism import Organism, DIRECTIONS
 from entity import Entity, DEFAULT_COLORKEY, load_image
 from camera import Camera, complex_camera
 from track import Track, MAX_OUTSIDE_DISTANCE
-from tower import Tower, build_tower, FIRE_TOWER, BALLISTA_TOWER, CATAPULT_TOWER, CHAPEL_TOWER, NAME
+from tower import Tower, build_tower, FIRE_TOWER, BALLISTA_TOWER, CATAPULT_TOWER, CHAPEL_TOWER, CANNON_TOWER, NAME
 from roundmanager import RoundManager
 from pygame import Surface, Color, Rect, font, sprite
 import math
 
-TOWER_SELECT_LIST = [BALLISTA_TOWER, CATAPULT_TOWER, FIRE_TOWER, CHAPEL_TOWER]
+TOWER_SELECT_LIST = [ BALLISTA_TOWER, CATAPULT_TOWER, CANNON_TOWER, FIRE_TOWER, CHAPEL_TOWER]
 
 BLACK = Color("#000000")
 WHITE = Color("#FFFFFF")
@@ -51,6 +51,7 @@ class Level():
         self.entities = pygame.sprite.Group()
         self.towers = pygame.sprite.Group()
         self.projectiles = pygame.sprite.Group()
+        self.explosions = pygame.sprite.Group()
         total_level_width  = width*16
         total_level_height = height*16
         self.generate_background_image()
@@ -83,6 +84,7 @@ class Level():
             self.round_manager.update()
             self.update_entities(screen)
         self.update_projectiles(screen)
+        self.update_explosions(screen)
         self.update_tower_placement(screen)
         self.update_ui(screen) 
         self.update_round_label(screen)
@@ -111,8 +113,14 @@ class Level():
             p.rect.left += p.xvel
             p.rect.top += p.yvel
             for e in self.entities:
-                if pygame.sprite.collide_mask(p, e):
-                    p.collide_with(e)
+                if pygame.sprite.collide_mask(p, e): p.collide_with(e)
+
+    def update_explosions(self, screen):
+        for x in self.explosions:
+            screen.blit(x.image, (x.rect.left, x.rect.top))
+            x.update(self)
+            for e in self.entities:
+                if pygame.sprite.collide_mask(x, e): x.collide_with(e)
 
     def update_tower_placement(self, screen):
         if not self.selected_place_tower: return
@@ -273,8 +281,15 @@ class Level():
     def remove_projectile(self, projectile):
         self.projectiles.remove(projectile)
 
+    def remove_explosion(self, explosion):
+        self.explosions.remove(explosion)
+
     def give_money(self, money):
         self.money += money
 
     def add_projectile(self, projectile):
         self.projectiles.add(projectile)
+
+    def add_explosion(self, explosion, center_x, center_y):
+        explosion.rect.center = center_x, center_y
+        self.explosions.add(explosion)

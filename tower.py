@@ -251,7 +251,7 @@ class BallistaTower(Tower):
 		elif x2 > x1 and y2 > y1: angle = 180 + angle
 		elif x2 > x1 and y2 <= y1: angle = -1*angle
 		self.image = pygame.transform.rotate(self.default_image, angle) 
-		bolt = self.generate_projectile(self.rotated_bolt_image(angle), xvel, yvel) #self.generate_bolt(self.rotated_bolt_image(angle), xvel, yvel)
+		bolt = self.generate_projectile(self.rotated_bolt_image(angle), xvel, yvel) 
 		level.add_projectile(bolt)
 		self.attack_counter = self.attack_speed
 
@@ -317,7 +317,6 @@ class ChapelTower(Tower):
 
 	def update(self, level, screen):
 		Tower.update(self, level, screen)
-		#screen.blit(self.fire_sprite.image, (self.fire_sprite.rect.left, self.fire_sprite.rect.top))
 		for hit in reversed(self.hit_enemy_list):
 			hit[1] -= 1
 			if hit[1] <= 0: self.hit_enemy_list.remove(hit)
@@ -332,13 +331,65 @@ class ChapelTower(Tower):
 						break
 				if not check:
 					self.hit_enemy_list.append([e, self.attack_speed])
-					self.deal_damage(e)		
+					self.deal_damage(e)	
+
+class CannonTower(Tower):
+	"""CannonTower( Level, Surface ) -> CannonTower
+
+	TODO: docstrings
+	"""
+	def __init__(self, level):
+		Tower.__init__(self, level, CANNON_TOWER)
+		self.default_image = Surface((32, 32))
+		self.default_image.fill(DEFAULT_COLORKEY)
+		self.default_image.set_colorkey(DEFAULT_COLORKEY)
+		self.default_image.blit(self.image, (0, 0))
+		self.projectile_image = load_image(self.projectile_image_filename, "./images", DEFAULT_COLORKEY)
+		self.attack_counter = 0
+		self.explosion_image = load_image("cannon_ball_explosion.bmp", "./images", DEFAULT_COLORKEY)
+			
+	def update(self, level, screen):
+		Tower.update(self, level, screen)
+		if self.attack_counter > 0: self.attack_counter -= 1
+		reachable_enemies = self.enemies_in_range(level)
+		if reachable_enemies: self.fire_at(level, reachable_enemies[0])
+
+	def fire_at(self, level, target):
+		if self.attack_counter > 0: return
+		x1, y1 = self.rect.center
+		x2, y2 = target.rect.center
+		xdist = x2 - x1
+		ydist = y2 - y1
+		magnitude = math.pow(math.pow(xdist, 2) + math.pow(ydist, 2), .5)
+		xvel, yvel = self.projectile_speed*xdist/magnitude, self.projectile_speed*ydist/magnitude
+		if ydist == 0: angle = 90
+		elif xdist == 0: angle = 0
+		else: angle = abs((math.atan(xdist/ydist))*180/(math.pi))%90
+		if x2 <= x1 and y2 <= y1: pass
+		elif x2 <= x1 and y2 > y1: angle = 180 - angle
+		elif x2 > x1 and y2 > y1: angle = 180 + angle
+		elif x2 > x1 and y2 <= y1: angle = -1*angle
+		self.image = pygame.transform.rotate(self.default_image, angle) 
+		frag_filename = None
+		if self.upgrade_levels[1] >= 2: 
+			frag_filename = "cannon_ball_frag.bmp"
+			
+		ball = self.generate_projectile(self.projectile_image, xvel, yvel, frag_filename)
+		level.add_projectile(ball)
+		self.attack_counter = self.attack_speed
+
+	def generate_projectile(self, image, xvel, yvel, frag_filename = None):
+		explosion_data = None
+		if self.upgrade_levels[1] >= 3: explosion_data = [self.explosion_image, self.damage]
+		projectile = Projectile(self, self.level, image, self.damage, self.pierce, xvel, yvel, self.rect.left, self.rect.top, frag_filename, explosion_data)
+		return projectile
 
 
 FIRE_TOWER = "fire_tower"
 BALLISTA_TOWER = "ballista_tower"
 CATAPULT_TOWER = "catapult_tower"
 CHAPEL_TOWER = "chapel_tower"
+CANNON_TOWER = "cannon_tower"
 
 NAME = "name"
 CONSTRUCTOR = "constructor"
@@ -551,6 +602,57 @@ TOWER_DATA_MAP = {
 					NAME:"Lord's Wrath",
 					COST:500,
 					DAMAGE:10
+				}
+			}
+		}
+	},
+	CANNON_TOWER:{
+		NAME:"Cannon",
+		CONSTRUCTOR:CannonTower,
+		IMAGE_FILENAME:"cannon_1.bmp",
+		PROJECTILE_IMAGE_FILENAME:"cannon_ball_1.bmp",
+		PURCHASE_COST:350,
+		DAMAGE:15,
+		RANGE:125,
+		ATTACK_SPEED:100,
+		PROJECTILE_SPEED:18,
+		UPGRADE_MAP:{
+			LEFT:{
+				1:{
+					NAME:"Rigid Balls",
+					COST:250,
+					PIERCE:1
+				},
+				2:{
+					NAME:"More Gunpowder",
+					COST:325,
+					PROJECTILE_SPEED:20,
+					RANGE:150,
+					ATTACK_SPEED:90
+				},
+				3:{
+					NAME:"Autocannon",
+					COST:3250,
+					PROJECTILE_SPEED:25,
+					RANGE:175,
+					ATTACK_SPEED:5,
+					IMAGE_FILENAME:"autocannon.bmp"	
+				}
+			},
+			RIGHT:{
+				1:{
+					NAME:"Bigger Balls",
+					COST:100,
+					DAMAGE:20,
+					PROJECTILE_IMAGE_FILENAME:"cannon_ball_2.bmp"				
+				},
+				2:{
+					NAME:"Frag Balls",
+					COST:400 #TODO: add frag
+				},
+				3:{
+					NAME:"Gunpowder Filling",
+					COST:1100 #TODO: make explosive
 				}
 			}
 		}
