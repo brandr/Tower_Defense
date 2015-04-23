@@ -1,0 +1,7 @@
+# TODOS:
+
+- finish catapult upgrades
+- make sure upgrades don't contradict each other
+- make more enemies
+- make it easier to set up enemies
+- make tower upgrades
