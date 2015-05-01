@@ -1,4 +1,4 @@
-from entity import load_image, DEFAULT_COLORKEY, IMPACT
+from entity import load_image, DEFAULT_COLORKEY, IMPACT, FIRE_ELEMENTAL
 import pygame
 from pygame import Rect
 import math
@@ -29,7 +29,7 @@ class Projectile(pygame.sprite.Sprite):
 		if other in self.hit_targets: return
 		if IMPACT in other.resistances: return
 		self.level.give_money(self.damage)
-		other.take_damage(self.damage)
+		self.deal_damage(other)
 		self.pierce -= 1
 		if self.pierce <= 0:
 			if self.explosion: self.level.add_explosion(self.explosion, self.rect.centerx, self.rect.centery)
@@ -50,6 +50,11 @@ class Projectile(pygame.sprite.Sprite):
 		self.level.add_projectile(frag_down)
 		self.level.add_projectile(frag_left)
 		self.level.add_projectile(frag_right)
+
+	def deal_damage(self, other):
+		other.take_damage(self.damage)
+		if other.stun: self.owner.stun(other.stun)
+		if other.entity_key == FIRE_ELEMENTAL: self.owner.remove_all_upgrades()
 
 class Explosion(pygame.sprite.Sprite):
 	def __init__(self, image, damage):

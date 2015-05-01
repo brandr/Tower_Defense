@@ -47,6 +47,9 @@ class Entity(pygame.sprite.Sprite):
 	def init_resistances(self, value):
 		self.resistances = value
 
+	def init_stun(self, value):
+		self.stun = value
+
 	def update(self, track):
 		speed = self.calculate_speed()
 		for i in xrange(speed):
@@ -120,6 +123,11 @@ GHOST = "ghost"
 WRAITH = "wraith"
 LICH = "lich"
 WYVERN = "wyvern"
+DEMON_GENERAL = "demon_general"
+WISP = "wisp"
+LIGHTNING_ELEMENTAL = "lightning_elemental"
+EARTH_ELEMENTAL = "earth_elemental"
+FIRE_ELEMENTAL = "fire_elemental"
 
 # attributes
 
@@ -129,6 +137,7 @@ HITPOINTS = "hitpoints"
 SPEED = "speed"
 DAMAGE = "damage"
 RESISTANCES = "resistances"
+STUN = "stun"
 
 # elements
 
@@ -136,46 +145,32 @@ IMPACT = "impact"
 FIRE = "fire"
 HOLY = "holy"
 
-ATTRIBUTE_LIST = [IMAGE, HITPOINTS, SPEED, DAMAGE, RESISTANCES]
+ATTRIBUTE_LIST = [IMAGE, HITPOINTS, SPEED, DAMAGE, RESISTANCES, STUN]
 
 INIT_METHOD_MAP = {
 	IMAGE:Entity.init_image,
 	HITPOINTS:Entity.init_hitpoints,
 	SPEED:Entity.init_speed,
 	DAMAGE:Entity.init_damage,
-	RESISTANCES:Entity.init_resistances
+	RESISTANCES:Entity.init_resistances,
+	STUN:Entity.init_stun
 }
 
 ENEMY_ATTRIBUTE_MAP = {
-	DEFAULT:{
-		IMAGE:"test_enemy_1.bmp", IMAGE_TRANSPARENCY:255, HITPOINTS:2, SPEED:2, DAMAGE:1, RESISTANCES:[HOLY]
-	},
+	DEFAULT:{IMAGE:"test_enemy_1.bmp", IMAGE_TRANSPARENCY:255, HITPOINTS:2, SPEED:2, DAMAGE:1, RESISTANCES:[HOLY], STUN:0},
 	BASIC_ENEMY:{},
-	KNIGHT:{
-		IMAGE:"knight_1.bmp", HITPOINTS:5, SPEED:1, DAMAGE:2
-	},
-	BARBARIAN:{
-		IMAGE:"barbarian_1.bmp", DAMAGE:3
-	},
-	TROLL:{
-		IMAGE:"troll_1.bmp", HITPOINTS:50, SPEED:1, DAMAGE:15
-	},
-	HORSE_RIDER:{
-		IMAGE:"horse_rider_1.bmp", HITPOINTS:4, SPEED:3, DAMAGE:2
-	},
-	DEMON:{
-		IMAGE:"demon_1.bmp", HITPOINTS:6, SPEED:2, DAMAGE:10, RESISTANCES:[FIRE]
-	},
-	GHOST:{
-		IMAGE:"ghost_1.bmp", IMAGE_TRANSPARENCY:128, HITPOINTS:1, SPEED:3, DAMAGE:2, RESISTANCES:[IMPACT, FIRE]
-	},
-	WRAITH:{
-		IMAGE:"wraith_1.bmp", IMAGE_TRANSPARENCY:128, HITPOINTS:6, SPEED:2, DAMAGE:5, RESISTANCES:[IMPACT, FIRE]
-	},
-	LICH:{
-		IMAGE:"lich_1.bmp", IMAGE_TRANSPARENCY:128, HITPOINTS:30, SPEED:2, DAMAGE:45, RESISTANCES:[IMPACT, FIRE]
-	},
-	WYVERN:{
-		IMAGE:"wyvern_1.bmp", HITPOINTS:100, SPEED:3, DAMAGE:45, RESISTANCES:[HOLY, FIRE]
-	}
+	KNIGHT:{IMAGE:"knight_1.bmp", HITPOINTS:5, SPEED:1, DAsMAGE:2},
+	BARBARIAN:{IMAGE:"barbarian_1.bmp", DAMAGE:3},
+	TROLL:{IMAGE:"troll_1.bmp", HITPOINTS:50, SPEED:1, DAMAGE:15},
+	HORSE_RIDER:{IMAGE:"horse_rider_1.bmp", HITPOINTS:4, SPEED:3, DAMAGE:2},
+	DEMON:{IMAGE:"demon_1.bmp", HITPOINTS:6, SPEED:2, DAMAGE:10, RESISTANCES:[FIRE]},
+	GHOST:{IMAGE:"ghost_1.bmp", IMAGE_TRANSPARENCY:128, HITPOINTS:1, SPEED:3, DAMAGE:2, RESISTANCES:[IMPACT, FIRE]},
+	WRAITH:{IMAGE:"wraith_1.bmp", IMAGE_TRANSPARENCY:128, HITPOINTS:6, SPEED:2, DAMAGE:5, RESISTANCES:[IMPACT, FIRE]},
+	LICH:{IMAGE:"lich_1.bmp", IMAGE_TRANSPARENCY:128, HITPOINTS:30, SPEED:2, DAMAGE:45, RESISTANCES:[IMPACT, FIRE]},
+	WYVERN:{IMAGE:"wyvern_1.bmp", HITPOINTS:100, SPEED:3, DAMAGE:45, RESISTANCES:[HOLY, FIRE]},
+	DEMON_GENERAL:{IMAGE:"demon_general_1.bmp", HITPOINTS:50, SPEED:2, DAMAGE:50, RESISTANCES:[FIRE], STUN:200},
+	WISP:{IMAGE:"wisp_1.bmp", HITPOINTS:1000, SPEED:1, DAMAGE:10, RESISTANCES:[IMPACT, FIRE]},
+	LIGHTNING_ELEMENTAL:{IMAGE:"lightning_elemental_1.bmp", HITPOINTS:50, SPEED:2, DAMAGE:40, RESISTANCES:[IMPACT, HOLY], STUN:300},
+	EARTH_ELEMENTAL:{IMAGE:"earth_elemental_1.bmp", HITPOINTS:500, SPEED:1, DAMAGE:100, RESISTANCES:[HOLY, FIRE]},
+	FIRE_ELEMENTAL:{IMAGE:"fire_elemental_1.bmp", HITPOINTS:25, SPEED:2, DAMAGE:50, RESISTANCES:[HOLY, FIRE]}
 } 

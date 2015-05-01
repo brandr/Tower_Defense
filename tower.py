@@ -1,7 +1,7 @@
 from entity import load_image, DEFAULT_COLORKEY
 from projectile import Projectile
 from effect import build_effect, SLOW, POISON
-from entity import FIRE, HOLY
+from entity import FIRE, HOLY, FIRE_ELEMENTAL
 import pygame
 from pygame import Rect, Surface, Color
 import math 
@@ -37,6 +37,7 @@ class Tower(pygame.sprite.Sprite):
 		if PROJECTILE_SPEED in tower_map: self.projectile_speed = tower_map[PROJECTILE_SPEED]
 		if PIERCE in tower_map: self.pierce = tower_map[PIERCE]
 		self.level = level
+		self.stun_counter = 0
 
 	def create_copy(self):
 		constructor = TOWER_DATA_MAP[self.tower_key][CONSTRUCTOR]
@@ -53,12 +54,18 @@ class Tower(pygame.sprite.Sprite):
 	def get_name(self):
 		return TOWER_DATA_MAP[self.tower_key][NAME]
 
+	def get_description(self):
+		if DESCRIPTION in TOWER_DATA_MAP[self.tower_key]: return TOWER_DATA_MAP[self.tower_key][DESCRIPTION]
+		else: return []
+	
 	def activate(self, level): # called when the tower is placed on the field
 		self.level = level
 
 	def deal_damage(self, enemy):
 		enemy.take_damage(self.damage)
 		self.level.give_money(self.damage)
+		if enemy.stun: self.stun(enemy.stun)
+		if enemy.entity_key == FIRE_ELEMENTAL: self.remove_all_upgrades()
 
 	def update(self, level, screen):
 		pass
@@ -94,6 +101,7 @@ class Tower(pygame.sprite.Sprite):
 		return value/2
 
 	def sell(self):
+		if self.stun_counter > 0: return
 		self.level.give_money(self.sell_value())
 		self.level.remove_tower(self)
 
@@ -110,7 +118,7 @@ class Tower(pygame.sprite.Sprite):
 		if self.attempt_upgrade(cost, data_map): self.upgrade_levels[1] += 1
 
 	def attempt_upgrade(self, cost, data_map):
-		if self.level.money < cost: return False
+		if self.level.money < cost or self.stun_counter > 0: return False
 		self.level.money -= cost
 		if METHOD in data_map: 
 			method, arg = data_map[METHOD][0], data_map[METHOD][1]
@@ -131,6 +139,25 @@ class Tower(pygame.sprite.Sprite):
 			self.range_effect = build_effect(range_effect_data[0], range_effect_data[1])
 		return True 
 
+	def remove_all_upgrades(self):
+		tower_map = TOWER_DATA_MAP[self.tower_key]
+		self.default_image = load_image(tower_map[IMAGE_FILENAME], "./images", DEFAULT_COLORKEY)
+		self.image = load_image(tower_map[IMAGE_FILENAME], "./images", DEFAULT_COLORKEY)
+		self.mask = pygame.mask.from_surface(self.image)
+		self.load_transparent_image()
+		self.upgrade_levels = [0, 0]
+		self.damage = tower_map[DAMAGE]
+		self.range = tower_map[RANGE]
+		self.attack_speed = tower_map[ATTACK_SPEED]
+		self.projectile_speed = 0
+		self.pierce = 1
+		self.range_effect = None
+		if PROJECTILE_IMAGE_FILENAME in tower_map: 
+			self.projectile_image_filename = tower_map[PROJECTILE_IMAGE_FILENAME]
+			self.refresh_projectile_image()
+		if PROJECTILE_SPEED in tower_map: self.projectile_speed = tower_map[PROJECTILE_SPEED]
+		if PIERCE in tower_map: self.pierce = tower_map[PIERCE]
+
 	def get_left_upgrade_data_map(self):
 		return TOWER_DATA_MAP[self.tower_key][UPGRADE_MAP][LEFT][self.upgrade_levels[0] + 1]
 
@@ -150,6 +177,9 @@ class Tower(pygame.sprite.Sprite):
 	def get_right_upgrade_image(self):
 		if self.upgrade_levels[1] + 1 > MAX_UPGRADE_LEVELS: return None
 		return load_image(self.tower_key + "_upgrade_right_" + str(self.upgrade_levels[1] + 1) + ".bmp", "./images", DEFAULT_COLORKEY)
+
+	def stun(self, stun):
+		self.stun_counter = stun
 		
 class FireTower(Tower):
 	def __init__(self, level):
@@ -392,6 +422,7 @@ CHAPEL_TOWER = "chapel_tower"
 CANNON_TOWER = "cannon_tower"
 
 NAME = "name"
+DESCRIPTION = "description"
 CONSTRUCTOR = "constructor"
 IMAGE_FILENAME = "image_filename"
 METHOD = "method"
@@ -412,6 +443,10 @@ COST = "cost"
 TOWER_DATA_MAP = {
 	FIRE_TOWER:{
 		NAME:"Fire Tower",
+		DESCRIPTION:[
+			"An AOE tower with expensive but",
+			"powerful upgrades."
+		],
 		CONSTRUCTOR:FireTower,
 		IMAGE_FILENAME:"fire_tower_1.bmp",
 		PURCHASE_COST:150,
@@ -459,6 +494,10 @@ TOWER_DATA_MAP = {
 	},
 	BALLISTA_TOWER:{
 		NAME:"Ballista",
+		DESCRIPTION:[
+			"A basic medium-speed tower",
+			"with good upgrades."
+		],
 		CONSTRUCTOR:BallistaTower,
 		IMAGE_FILENAME:"ballista_1.bmp",
 		PROJECTILE_IMAGE_FILENAME:"ballista_bolt_1.bmp",
@@ -511,6 +550,10 @@ TOWER_DATA_MAP = {
 	},
 	CATAPULT_TOWER:{
 		NAME:"Catapult",
+		DESCRIPTION:[
+			"A slow-firing but powerful tower",
+			 "meant mainly for boss enemies."
+		],
 		CONSTRUCTOR:CatapultTower,
 		IMAGE_FILENAME:"catapult_1.bmp",
 		PROJECTILE_IMAGE_FILENAME:"catapult_stone_1.bmp",
@@ -561,6 +604,10 @@ TOWER_DATA_MAP = {
 	},
 	CHAPEL_TOWER:{
 		NAME:"Chapel",
+		DESCRIPTION:[
+			"A holy place that inflicts the might of", 
+			"the lord upon those who despise it."
+		],
 		CONSTRUCTOR:ChapelTower,
 		IMAGE_FILENAME:"chapel_1.bmp",
 		PURCHASE_COST:50,
@@ -608,6 +655,10 @@ TOWER_DATA_MAP = {
 	},
 	CANNON_TOWER:{
 		NAME:"Cannon",
+		DESCRIPTION:[
+			"Extremely expensive but very", 
+			"powerful and good for hordes."
+		],
 		CONSTRUCTOR:CannonTower,
 		IMAGE_FILENAME:"cannon_1.bmp",
 		PROJECTILE_IMAGE_FILENAME:"cannon_ball_1.bmp",
@@ -648,11 +699,11 @@ TOWER_DATA_MAP = {
 				},
 				2:{
 					NAME:"Frag Balls",
-					COST:400 #TODO: add frag
+					COST:400
 				},
 				3:{
 					NAME:"Gunpowder Filling",
-					COST:1100 #TODO: make explosive
+					COST:1100
 				}
 			}
 		}

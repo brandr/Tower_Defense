@@ -4,7 +4,7 @@ from organism import Organism, DIRECTIONS
 from entity import Entity, DEFAULT_COLORKEY, load_image
 from camera import Camera, complex_camera
 from track import Track, MAX_OUTSIDE_DISTANCE
-from tower import Tower, build_tower, FIRE_TOWER, BALLISTA_TOWER, CATAPULT_TOWER, CHAPEL_TOWER, CANNON_TOWER, NAME
+from tower import Tower, build_tower, FIRE_TOWER, BALLISTA_TOWER, CATAPULT_TOWER, CHAPEL_TOWER, CANNON_TOWER, NAME, COST
 from roundmanager import RoundManager
 from pygame import Surface, Color, Rect, font, sprite
 import math
@@ -13,13 +13,15 @@ TOWER_SELECT_LIST = [ BALLISTA_TOWER, CATAPULT_TOWER, CANNON_TOWER, FIRE_TOWER, 
 
 BLACK = Color("#000000")
 WHITE = Color("#FFFFFF")
+GREY = Color("#333333")
 RED = Color("#FF0000")
 YELLOW = Color("#FFFF00")
+
 
 WIN_WIDTH = 800
 WIN_HEIGHT = 640
 DEFAULT_BACKGROUND_COLOR = Color("#009900")
-UI_WIDTH, UI_HEIGHT = WIN_WIDTH/3, WIN_HEIGHT/5
+UI_WIDTH, UI_HEIGHT = WIN_WIDTH/2.5, WIN_HEIGHT/5
 UI_X, UI_Y = WIN_WIDTH - UI_WIDTH, 0
 ROUND_LABEL_X, ROUND_LABEL_Y = WIN_WIDTH - 148, WIN_HEIGHT - 32
 ACTIVE_TOWER_UI_X, ACTIVE_TOWER_UI_Y = WIN_WIDTH/3, WIN_HEIGHT - 100
@@ -39,6 +41,7 @@ class Level():
         self.ui_font = font.Font("./fonts/FreeSansBold.ttf", 12)
         self.round_label_font = font.Font("./fonts/FreeSansBold.ttf", 20)
         self.mouse_position = (0, 0)
+        self.placing_tower = False
         self.selected_place_tower = build_tower(self, BALLISTA_TOWER)
         self.selected_active_tower = None
         self.ui_tower_image = build_tower(self, BALLISTA_TOWER).image
@@ -91,7 +94,8 @@ class Level():
 
     def update_towers(self, screen):
         for t in self.towers:
-            t.update(self, screen)
+            if t.stun_counter <= 0: t.update(self, screen)
+            else: t.stun_counter -= 1
             screen.blit(t.image, (t.rect.left, t.rect.top))
 
     def update_entities(self, screen):
@@ -123,7 +127,7 @@ class Level():
                 if pygame.sprite.collide_mask(x, e): x.collide_with(e)
 
     def update_tower_placement(self, screen):
-        if not self.selected_place_tower: return
+        if not self.placing_tower: return
         width, height = self.selected_place_tower.rect.width/2, self.selected_place_tower.rect.height/2
         screen.blit(self.selected_place_tower.transparent_image, (self.mouse_position[0] - width, self.mouse_position[1] - height))
         radius = self.selected_place_tower.range
@@ -136,7 +140,7 @@ class Level():
         range_circle_image = Surface((radius*2, radius*2))
         range_circle_image.fill(DEFAULT_COLORKEY)
         range_circle_image.set_colorkey(DEFAULT_COLORKEY)
-        pygame.draw.circle(range_circle_image, RED, (radius, radius), radius - 1, 2)
+        pygame.draw.circle(range_circle_image, GREY, (radius, radius), radius - 1, 2)
         screen.blit(range_circle_image, (pos[0] - radius, pos[1] - radius))
 
     def update_ui(self, screen):
@@ -164,6 +168,17 @@ class Level():
         tower_bg.fill(WHITE)
         pane.blit(tower_bg, (32, 54))
         pane.blit(self.ui_tower_image, (32, 54))
+        if self.selected_place_tower:
+            tower_name = self.selected_place_tower.get_name()
+            tower_name_text_image = self.ui_font.render(tower_name, True, WHITE )
+            pane.blit(tower_name_text_image, (128, 8))
+            tower_cost = "Cost: $" + str(self.selected_place_tower.purchase_cost)
+            tower_cost_image = self.ui_font.render(tower_cost, True, WHITE)
+            pane.blit(tower_cost_image, (128, 32))
+            tower_description = self.selected_place_tower.get_description()
+            for i in xrange(len(tower_description)):
+                image = self.ui_font.render(tower_description[i], True, WHITE)
+                pane.blit(image, (110, 56 + 20*i))
 
     def update_round_label(self, screen):
         round_label = self.round_label_font.render("Round: " + str(self.round_manager.round_number), False, BLACK)
@@ -175,18 +190,22 @@ class Level():
         tower_bg.fill(WHITE)
         active_tower_pane.blit(tower_bg, (8, 60))
         active_tower_pane.blit(self.selected_active_tower.image, (8, 60))
-        active_tower_pane.blit( self.ui_font.render(self.selected_active_tower.get_name(), False, WHITE), ( 8, 8 ))
+        active_tower_pane.blit( self.ui_font.render(self.selected_active_tower.get_name(), True, WHITE), ( 8, 8 ))
         left_upgrade_image = self.selected_active_tower.get_left_upgrade_image()
         right_upgrade_image = self.selected_active_tower.get_right_upgrade_image()
         if left_upgrade_image: 
             upgrade_name = self.selected_active_tower.get_left_upgrade_data_map()[NAME]
-            text = self.ui_font.render(upgrade_name, False, WHITE)
-            active_tower_pane.blit(text, (64, ACTIVE_TOWER_UI_HEIGHT - 58))
+            text = self.ui_font.render(upgrade_name, True, WHITE)
+            active_tower_pane.blit(text, (64, ACTIVE_TOWER_UI_HEIGHT - 74))
+            cost_text = self.ui_font.render("Cost: $" + str(self.selected_active_tower.get_left_upgrade_data_map()[COST]), True, WHITE )
+            active_tower_pane.blit(cost_text, (64, ACTIVE_TOWER_UI_HEIGHT - 58)) 
             active_tower_pane.blit(left_upgrade_image, ( 64, ACTIVE_TOWER_UI_HEIGHT - 40 ) )
         if right_upgrade_image: 
             upgrade_name = self.selected_active_tower.get_right_upgrade_data_map()[NAME]
-            text = self.ui_font.render(upgrade_name, False, WHITE)
-            active_tower_pane.blit(text, (168, ACTIVE_TOWER_UI_HEIGHT - 58))
+            text = self.ui_font.render(upgrade_name, True, WHITE)
+            active_tower_pane.blit(text, (168, ACTIVE_TOWER_UI_HEIGHT - 74))
+            cost_text = self.ui_font.render("Cost: $" + str(self.selected_active_tower.get_right_upgrade_data_map()[COST]), True, WHITE )
+            active_tower_pane.blit(cost_text, (168, ACTIVE_TOWER_UI_HEIGHT - 58)) 
             active_tower_pane.blit(right_upgrade_image, ( 168, ACTIVE_TOWER_UI_HEIGHT - 40 ) )       
         sell_tower_button = self.draw_sell_tower_button()
         active_tower_pane.blit(sell_tower_button, (SELL_TOWER_X, SELL_TOWER_Y))
@@ -196,14 +215,14 @@ class Level():
         sell_tower_bg = Surface(( 120, 16))
         sell_tower_bg.fill(YELLOW)
         sell_text = "Sell Tower for $" + str(self.selected_active_tower.sell_value())
-        sell_tower_bg.blit(self.ui_font.render(sell_text, False, BLACK, YELLOW), (0, 0))
+        sell_tower_bg.blit(self.ui_font.render(sell_text, True, BLACK, YELLOW), (0, 0))
         return sell_tower_bg
 
     def tower_toggle(self, directon):
         self.tower_select_index = (self.tower_select_index + directon) % len(TOWER_SELECT_LIST)
         current_tower = build_tower(self, TOWER_SELECT_LIST[self.tower_select_index])
         self.ui_tower_image = current_tower.image
-        if self.selected_place_tower: self.selected_place_tower = build_tower(self, TOWER_SELECT_LIST[self.tower_select_index])
+        self.selected_place_tower = build_tower(self, TOWER_SELECT_LIST[self.tower_select_index])
 
     def round_toggle(self):
         self.round_manager.toggle()
@@ -212,7 +231,7 @@ class Level():
         if pos[0] > UI_X and pos[1] < UI_HEIGHT: 
             self.ui_left_click(pos)
             return
-        if not self.selected_place_tower:
+        if not self.placing_tower:
             if self.selected_active_tower and pos[0] > ACTIVE_TOWER_UI_X and pos[0] < ACTIVE_TOWER_UI_X + ACTIVE_TOWER_UI_WIDTH and pos[1] > ACTIVE_TOWER_UI_Y:
                 self.active_tower_ui_left_click(pos)
                 return
@@ -238,8 +257,8 @@ class Level():
 
     def right_click(self, pos):
         self.selected_active_tower = None
-        if self.selected_place_tower: self.selected_place_tower = None
-        else: self.selected_place_tower = build_tower(self, TOWER_SELECT_LIST[self.tower_select_index])
+        if self.placing_tower: self.placing_tower = False
+        else: self.placing_tower = True #self.selected_place_tower = build_tower(self, TOWER_SELECT_LIST[self.tower_select_index])
 
     def update_mouse_position(self, pos):
         self.mouse_position = pos
@@ -253,7 +272,7 @@ class Level():
         built_tower.activate(self)
 
     def can_place_tower(self, pos):
-        if not self.selected_place_tower: return False
+        if not self.placing_tower: return False
         width, height = self.selected_place_tower.rect.width, self.selected_place_tower.rect.height
         check_rect = Rect(pos[0] - width/2, pos[1] - height/2, width, height )
         if check_rect.right > UI_X and check_rect.top < UI_HEIGHT: return False
